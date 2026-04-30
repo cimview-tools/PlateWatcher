@@ -32,7 +32,7 @@ interface PlateDao {
     fun deleteOlderThan(limit: Long)
 }
 
-@Database(entities = [PlateRecord::class], version = 2)
+@Database(entities = [PlateRecord::class], version = 1, exportSchema = false)
 abstract class PlateDatabase : RoomDatabase() {
     abstract fun plateDao(): PlateDao
 
