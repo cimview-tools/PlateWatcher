@@ -1,60 +1,31 @@
-package be.habran.platewatcher
+# PlateWatcher Android
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.ImageFormat
-import android.graphics.Rect
-import android.graphics.YuvImage
-import androidx.camera.core.ImageProxy
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
-import kotlin.math.max
-import kotlin.math.min
+Prototype Android Kotlin prêt à ouvrir dans Android Studio.
 
-object BitmapUtils {
-    fun imageProxyToBitmap(image: ImageProxy): Bitmap? {
-        val yBuffer = image.planes[0].buffer
-        val uBuffer = image.planes[1].buffer
-        val vBuffer = image.planes[2].buffer
+## Fonctionnalités incluses
+- Caméra arrière via CameraX.
+- Analyse temps réel avec zone centrale optimisée pour véhicules arrivant de face.
+- OCR on-device via ML Kit Text Recognition.
+- Classification basique de plaques BE / FR / NL? / DE?.
+- Stabilisation sur plusieurs frames avant enregistrement.
+- Enregistrement local Room : plaque, pays estimé, confiance, date/heure, chemin de l'image recadrée.
+- Sauvegarde d'un crop JPEG de la plaque détectée dans le stockage privé de l'application.
+- Purge automatique des détections de plus de 7 jours.
 
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
+## Compilation APK
+1. Ouvrir ce dossier dans Android Studio.
+2. Laisser Gradle synchroniser.
+3. Brancher un téléphone Android réel.
+4. Cliquer sur Run pour installer l'app.
 
-        val nv21 = ByteArray(ySize + uSize + vSize)
-        yBuffer.get(nv21, 0, ySize)
-        vBuffer.get(nv21, ySize, vSize)
-        uBuffer.get(nv21, ySize + vSize, uSize)
+Pour générer un APK :
+- Android Studio > Build > Build Bundle(s) / APK(s) > Build APK(s)
+- ou terminal : `./gradlew assembleDebug`
 
-        val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
-        val out = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 85, out)
-        val bytes = out.toByteArray()
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-    }
+L'APK sera dans : `app/build/outputs/apk/debug/app-debug.apk`.
 
-    fun cropSafely(bitmap: Bitmap, rect: Rect, padding: Int = 12): Bitmap {
-        val left = max(0, rect.left - padding)
-        val top = max(0, rect.top - padding)
-        val right = min(bitmap.width, rect.right + padding)
-        val bottom = min(bitmap.height, rect.bottom + padding)
-        return Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top)
-    }
+## Limite importante
+Cette version ne contient pas de modèle ANPR professionnel entraîné spécifiquement sur les plaques européennes. Elle utilise un recadrage de zone utile + OCR + reconnaissance de formats. Pour une fiabilité élevée en mouvement, il faudra ajouter un modèle TFLite de détection de plaques, puis lancer l'OCR uniquement sur le crop détecté.
 
-    fun forwardVehicleRoi(bitmap: Bitmap): Bitmap {
-        // Zone centrale : évite le ciel/tableau de bord et accélère l’OCR.
-        val left = (bitmap.width * 0.12f).toInt()
-        val top = (bitmap.height * 0.28f).toInt()
-        val width = (bitmap.width * 0.76f).toInt()
-        val height = (bitmap.height * 0.52f).toInt()
-        return Bitmap.createBitmap(bitmap, left, top, width, height)
-    }
-
-    fun saveJpeg(bitmap: Bitmap, directory: File, fileName: String): String {
-        if (!directory.exists()) directory.mkdirs()
-        val file = File(directory, fileName)
-        FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 88, out) }
-        return file.absolutePath
-    }
-}
+## Vie privée / RGPD
+Ne pas utiliser en continu sur voie publique sans base légale claire. Les plaques sont des données personnelles. Par défaut, le prototype ne sauvegarde pas de vidéo complète, uniquement la plaque détectée et un crop local.

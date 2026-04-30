@@ -1,46 +1,21 @@
-package be.habran.platewatcher
+# Build APK avec GitHub Actions
 
-import android.content.Context
-import androidx.room.Dao
-import androidx.room.Database
-import androidx.room.Entity
-import androidx.room.Insert
-import androidx.room.PrimaryKey
-import androidx.room.Query
-import androidx.room.Room
-import androidx.room.RoomDatabase
+Ce projet contient déjà un workflow GitHub Actions :
 
-@Entity(tableName = "plate_records")
-data class PlateRecord(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val plate: String,
-    val country: String?,
-    val confidence: Float,
-    val detectedAt: Long,
-    val imagePath: String?
-)
+`.github/workflows/android-build.yml`
 
-@Dao
-interface PlateDao {
-    @Insert
-    fun insert(record: PlateRecord)
+## Étapes
 
-    @Query("SELECT * FROM plate_records ORDER BY detectedAt DESC")
-    fun getAll(): List<PlateRecord>
+1. Créer un dépôt GitHub vide, par exemple `PlateWatcher`.
+2. Envoyer tout le contenu du dossier `PlateWatcher` dans le dépôt.
+3. Aller dans l'onglet **Actions** du dépôt.
+4. Lancer le workflow **Build Android APK** avec **Run workflow**.
+5. Quand le build est terminé, ouvrir le run et télécharger l'artifact **PlateWatcher-debug-apk**.
 
-    @Query("DELETE FROM plate_records WHERE detectedAt < :limit")
-    fun deleteOlderThan(limit: Long)
-}
+Le fichier obtenu contiendra l'APK debug, généralement :
 
-@Database(entities = [PlateRecord::class], version = 2)
-abstract class PlateDatabase : RoomDatabase() {
-    abstract fun plateDao(): PlateDao
+`app-debug.apk`
 
-    companion object {
-        fun create(context: Context): PlateDatabase = Room.databaseBuilder(
-            context.applicationContext,
-            PlateDatabase::class.java,
-            "plates.db"
-        ).fallbackToDestructiveMigration().allowMainThreadQueries().build()
-    }
-}
+## Remarque
+
+Ce workflow installe Gradle 8.9 dans GitHub Actions. Il ne nécessite donc pas de fichier `gradlew` dans le dépôt.
